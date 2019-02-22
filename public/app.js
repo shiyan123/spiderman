@@ -12,19 +12,26 @@ new Vue({
 
     created: function() {
         var self = this;
-        this.ws = new WebSocket('ws://' + window.location.host + '/ws');
+        // this.ws = new WebSocket('ws://' + window.location.host + '/ws');
+        this.ws = new ReconnectingWebSocket('ws://' + window.location.host + '/ws', null, {debug: true, reconnectInterval: 3000});
         this.ws.binaryType = 'arraybuffer';
         this.ws.addEventListener('message', function(e) {
-            console.log(e.data);
-            var msg = msgpack.decode(new Uint8Array(e.data));
-            self.chatContent += '<div class="chip">'
+            var arrayBuffer;
+            var fileReader = new FileReader();
+            arrayBuffer = fileReader.readAsArrayBuffer(e.data);
+            fileReader.onload = function(event) {
+                arrayBuffer = event.target.result
+                console.log(arrayBuffer);
+                var msg = msgpack.decode(new Uint8Array(arrayBuffer));
+                self.chatContent += '<div class="chip">'
                     + '<img src="' + self.gravatarURL(msg.email) + '">' // Avatar
                     + msg.username
-                + '</div>'
-                + emojione.toImage(msg.message) + '<br/>'; // Parse emojis
+                    + '</div>'
+                    + emojione.toImage(msg.message) + '<br/>'; // Parse emojis
 
-            var element = document.getElementById('chat-messages');
-            element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+                var element = document.getElementById('chat-messages');
+                element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
+            };
         });
     },
 
