@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/vmihailenco/msgpack"
+	"fmt"
 )
 
 var clients = make(map[*websocket.Conn]bool) // connected clients
@@ -56,6 +57,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 	// Register our new client
 	clients[ws] = true
 
+	fmt.Printf("开始链接人数：%d \n", len(clients))
 	for {
 		var msg Message
 		// Read in a new message as JSON and map it to a Message object
@@ -68,6 +70,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 			delete(clients, ws)
 			break
 		}
+		fmt.Printf("接受：%s  \n", msg.Message)
 		// Send the newly received message to the broadcast channel
 		broadcast <- msg
 	}
@@ -75,6 +78,7 @@ func handleConnections(w http.ResponseWriter, r *http.Request) {
 
 func handleMessages() {
 	for {
+		fmt.Printf("目前在线人数：%d \n", len(clients))
 		// Grab the next message from the broadcast channel
 		msg := <-broadcast
 		// Send it out to every client that is currently connected
@@ -85,6 +89,7 @@ func handleMessages() {
 				client.Close()
 				delete(clients, client)
 			}
+			fmt.Printf("发送：%s  \n", msg.Message)
 			err = client.WriteMessage(websocket.BinaryMessage, b)
 			if err != nil {
 				log.Printf("error: %v", err)
