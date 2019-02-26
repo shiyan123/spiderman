@@ -7,41 +7,38 @@ new Vue({
         chatContent: '', // A running list of chat messages displayed on the screen
         email: null, // Email address used for grabbing an avatar
         username: null, // Our username
-        joined: false // True if email and username have been filled in
+        joined: false, // True if email and username have been filled in
+        userInfo: null
     },
 
-    created: function() {
-        var self = this;
-        // this.ws = new WebSocket('ws://' + window.location.host + '/ws');
-        this.ws = new ReconnectingWebSocket('ws://' + window.location.host + '/ws', null, {debug: true, reconnectInterval: 3000});
-        this.ws.binaryType = 'arraybuffer';
-        this.ws.addEventListener('message', function(e) {
-            var arrayBuffer;
-            var fileReader = new FileReader();
-            arrayBuffer = fileReader.readAsArrayBuffer(e.data);
-            fileReader.onload = function(event) {
-                arrayBuffer = event.target.result
-                console.log(arrayBuffer);
-                var msg = msgpack.decode(new Uint8Array(arrayBuffer));
-                self.chatContent += '<div class="chip">'
-                    + '<img src="' + self.gravatarURL(msg.email) + '">' // Avatar
-                    + msg.username
-                    + '</div>'
-                    + emojione.toImage(msg.message) + '<br/>'; // Parse emojis
-
-                var element = document.getElementById('chat-messages');
-                element.scrollTop = element.scrollHeight; // Auto scroll to the bottom
-            };
-        });
+    created: function () {
+        this.connect("ws://10.1.2.73:8000/ws");
+        this._getUserInfo();
     },
 
     methods: {
+
+        connect: function (host) {
+            this.ws = new ReconnectingWebSocket(host, null, { debug: true, reconnectInterval: 3000 });
+            this.ws.binaryType = 'arraybuffer';
+            this.ws.addEventListener('message', this.onMessage.bind(this));
+        },
+
+        onMessage: function (e) {
+            if (e) {
+                this._readMessage(e.data, this._addMessage.bind(this));
+            }
+        },
+
         send: function () {
-            // var msgpack = require("msgpack-lite");
-            var msss = msgpack.encode({"email": this.email, "username": this.username, "message": $('<p>').html(this.newMsg).text()});
+            var msss = {
+                "email": this.email,
+                "username": this.username,
+                "message": this.newMsg
+            };
             if (this.newMsg != '') {
-                this.ws.send(msss);
-                this.newMsg = ''; // Reset newMsg
+                this._sendMessage(msss);
+                this.newMsg = '';
             }
         },
 
@@ -50,17 +47,71 @@ new Vue({
                 Materialize.toast('You must enter an email', 2000);
                 return
             }
+
             if (!this.username) {
                 Materialize.toast('You must choose a username', 2000);
                 return
             }
-            this.email = $('<p>').html(this.email).text();
-            this.username = $('<p>').html(this.username).text();
-            this.joined = true;
+
+            this._login();
+            this._setUserInfo(this.email, this.username);
         },
 
-        gravatarURL: function(email) {
-            return 'http://www.gravatar.com/avatar/' + CryptoJS.MD5(email);
+
+        _sendMessage: function (data) {
+            if (!data) {
+                return;
+            }
+            let msg = msgpack.encode(data);
+            this.ws.send(msg);
+        },
+
+        _readMessage: function (data, callback) {
+            var arrayBuffer;
+            var fileReader = new FileReader();
+            arrayBuffer = fileReader.readAsArrayBuffer(data);
+            fileReader.onload = function (event) {
+                arrayBuffer = event.target.result;
+                var msg = msgpack.decode(new Uint8Array(arrayBuffer));
+                console.log('_readMessage', msg);
+                callback && callback(msg);
+            };
+        },
+
+        _addMessage: function (msg) {
+            var isSelf = msg.username === this.username;
+            this.chatContent += '<div class="message-cont ' + (isSelf ? 'self' : '') + '">'
+                + '<div class="message-title">' + msg.username + '</div>'
+                + '<div class="message">' + msg.message + '</div>'
+                + '</div>';
+            setTimeout(function () {
+                document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight + 100;
+            }, 1);
+        },
+
+
+        _setUserInfo: function (email, username) {
+            let userInfo = JSON.stringify({
+                email: username,
+                username: username
+            });
+            window.localStorage.setItem('userInfo', userInfo);
+        },
+
+        _getUserInfo: function () {
+            let userInfo = window.localStorage.getItem('userInfo');
+            if (userInfo) {
+                userInfo = JSON.parse(userInfo);
+                this.username = userInfo.username;
+                this.email = userInfo.email;
+                this._login();
+            }
+        },
+
+        _login: function () {
+            $('#user').html(this.username + '　');
+            this.joined = true;
         }
+
     }
 });

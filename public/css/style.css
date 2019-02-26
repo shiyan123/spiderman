@@ -1,0 +1,43 @@
+body {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
+
+main {
+    flex: 1 0 auto;
+}
+
+nav {
+    background-color: #26a699;
+}
+
+#chat-messages {
+    min-height: 10vh;
+    height: 60vh;
+    width: 100%;
+    overflow-y: scroll;
+}
+
+.message-cont {
+    text-align: left;
+}
+
+.message-cont.self {
+    text-align: right;
+}
+
+.message-title {
+    color: #bdbdbd;
+}
+
+.message {
+    margin: .2em 0 .5em -.2em;
+    border-radius: 5px;
+    padding: 5px 10px;
+    line-height: 1.5;
+    background-color: #eee;
+    color: #616161;
+    text-align: left;
+    display: inline-block;
+}
