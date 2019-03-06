@@ -2,7 +2,7 @@
 
 ------
 
-webscoket简单示例，**spiderman-webscoket**
+一个简易的聊天室，webscoket简单示例，**spiderman-webscoket**
 
 > * 语言：golang、JavaScript
 > * 数据格式：msgpack
